@@ -1,5 +1,15 @@
+# Dataset folder
+dataset/
+
+# Caching folder
+caches/
+
+# Results folder
+run_*/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
+.python-version
 *.py[codz]
 *$py.class
 
