@@ -10,11 +10,10 @@ import settings
 def build_dataset(train_ratio: float = 0.8, templates_ratio: float = 0.1):
     """
     Builds the dataset by splitting the events into training, testing, templates, and validation groups.
-
     Args:
-        train_ratio (float, optional): _description_. Defaults to 0.8.
-        templates_ratio (float, optional): _description_. Defaults to 0.1.
-
+        train_ratio (float, optional): Ratio of data for training. Defaults to 0.8.
+        templates_ratio (float, optional): Ratio of data for templates (from total). Defaults to 0.1.
+        validation_ratio (float, optional): Ratio of remaining data for validation. Defaults to 0.5.
     Returns:
         test_group (dict): Dictionary containing test audio file paths and their approximations.
         train_group (dict): Dictionary containing training audio file paths and their approximations.
@@ -32,18 +31,29 @@ def build_dataset(train_ratio: float = 0.8, templates_ratio: float = 0.1):
     np.random.seed(42)
     np.random.shuffle(rows)
     
-    split_train = int(len(rows) * train_ratio)
-    train_rows = rows[:split_train]
-    test_rows = rows[split_train:]
-
-    split_templates = int(len(train_rows) * templates_ratio)
-    templates_rows = train_rows[:split_templates]
+    # Split: test vs (train + templates + validation)
+    split_test = int(len(rows) * (1 - train_ratio))
+    test_rows = rows[:split_test]
+    trainable_rows = rows[split_test:]
     
+    # Split templates from total dataset
+    split_templates = int(len(rows) * templates_ratio)
+    templates_rows = trainable_rows[:split_templates]
+    train_final_rows = trainable_rows[split_templates:]
+    
+    print(f"\nTotal events in file: {len(rows)}")
+    print(f"Total train events: {len(trainable_rows)} ({train_ratio*100:.2f}%)")
+    print(f"\t|_From: {len(templates_rows)} templates | {len(train_final_rows)} train")
+    print(f"Total test events: {len(test_rows)} ({(1-train_ratio)*100:.2f}%)")
+
     test_group = {}
     train_group = {}
     templates_group = {}
-    validation_group = {}
 
+    n_test_events = 0
+    n_train_events = 0
+    n_templates_events = 0
+    
     # Grouping by Approximation - Test, Train, Templates
     for row in test_rows:
         path = row['Media_file']
@@ -51,36 +61,31 @@ def build_dataset(train_ratio: float = 0.8, templates_ratio: float = 0.1):
         if path not in test_group:
             test_group[path] = []
         test_group[path].append(approximation)
-
-    for row in train_rows:
+        n_test_events += 1
+    
+    for row in train_final_rows:
         path = row['Media_file']
         approximation = row['Approximation']
         if path not in train_group:
             train_group[path] = []
         train_group[path].append(approximation)
-
+        n_train_events +=1
+    
     for row in templates_rows:
         path = row['Media_file']
         approximation = row['Approximation']
         if path not in templates_group:
             templates_group[path] = []
         templates_group[path].append(approximation)
+        n_templates_events += 1
+    
+    print("\n[!] FOUND EVENTS")
+    print(f"Total events found: {n_train_events+n_templates_events+n_test_events}")
+    print(f"Train group: {(n_train_events+n_templates_events)} events found.")
+    print(f"\t|_ From: {n_templates_events} templates | {n_train_events} train.")
+    print(f"Test group: {n_test_events} events found.\n")
 
-    for r in rows:
-        path = r['Media_file']
-        approximation = r['Approximation']
-        if path not in validation_group:
-            validation_group[path] = []
-        validation_group[path].append(approximation)
-
-    print()
-
-    print(len(test_group), "test events found.")
-    print(len(train_group), "train events found.")
-    print(len(templates_group), "templates events found.")
-    print(len(validation_group), "validation events found.\n")
-
-    return test_group, train_group, templates_group, validation_group
+    return test_group, train_group, templates_group
 
 def build_similarities(cache_templates: dict, ALL_AUDIOS: dict) -> tuple:
     """

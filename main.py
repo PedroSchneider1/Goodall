@@ -30,8 +30,8 @@ def main():
     # Build dataset                 |
     # -------------------------------
 
-    test_group, train_group, templates_group, validation_group = build_dataset(train_ratio=TRAIN_RATIO,
-                                                                               templates_ratio=TEMPLATES_RATIO)
+    test_group, train_group, templates_group = build_dataset(train_ratio=TRAIN_RATIO,
+                                                             templates_ratio=TEMPLATES_RATIO)
 
     # -------------------------------
     # Feature calculation           |
@@ -58,12 +58,12 @@ def main():
     # Model Comparison Results      |
     # -------------------------------
     
-    compare_models(X_train,
+    compare_models(FEATURE_MODE,
+                   X_train,
                    y_train,
                    X_test,
                    test_group,
                    cache_test,
-                   validation_group,
                    TIMESTAMP,
                    timings)
 

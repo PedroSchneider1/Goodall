@@ -1,6 +1,6 @@
 [project]
 name = "goodall"
-version = "0.1.0"
+version = "0.1.1"
 description = "Automated behavioral analysis of primates via audio signal processing and machine learning."
 readme = "README.md"
 requires-python = ">=3.12"

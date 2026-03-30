@@ -184,12 +184,16 @@ def cwt_transform(audio: np.ndarray, sr: int, wavelet: str = 'cmor1.5-1.0', scal
     
     return cwt_coeffs, frequencies
 
-def compare_models(X_train: np.ndarray, y_train: np.ndarray, X_test:  np.ndarray, test_group: dict,
-    cache_test: dict, validation_group: dict,
-    timestamp: str = 'latest',
-    timings: dict = None,
-    save_results: bool = True
-) -> pd.DataFrame:
+def compare_models(feature_type: str,
+                   X_train: np.ndarray,
+                   y_train: np.ndarray,
+                   X_test:  np.ndarray,
+                   test_group: dict,
+                   cache_test: dict,
+                   timestamp: str = 'latest',
+                   timings: dict = None,
+                   save_results: bool = True
+                   ) -> pd.DataFrame:
     """
     Returns a DataFrame with one row per model containing:
     training_time_s, accuracy, precision, sensitivity, specificity, f1, roc_auc
@@ -207,29 +211,30 @@ def compare_models(X_train: np.ndarray, y_train: np.ndarray, X_test:  np.ndarray
     # Helper function
     # =============================
 
-    def _run_model(m, fit_fn):
+    def _run_model(m, fit_fn, type=feature_type):
         """Fits, evaluates, and records a single model. Returns its metrics dict."""
         t0 = time.perf_counter()
         fit_fn()
         training_time = time.perf_counter() - t0
 
-        m.evaluate(X_test, test_group, cache_test, validation_group)
+        m.evaluate(X_test, test_group, cache_test)
         met = m.metrics[m.model_type]
 
         # For AUC we need probabilities — call predict_proba directly
-        probs  = m.predict_proba(X_test)
         y_true_full = []
-        y_pred_full = probs
+        y_pred_full = m.predict_proba(X_test)
+        if type.upper() == 'EACH':
+            y_pred_full = y_pred_full.reshape(-1, 5).mean(axis=1)
         tp, tn, fn, fp = met['true_positives'], met['true_negatives'], met['false_negatives'], met['false_positives']
 
         idx = 0
-        for audio in test_group:
+        for audio in cache_test:
             n_peaks = cache_test[audio]['cwt_features'].shape[0]
             for peak_idx in range(n_peaks):
                 peak_time = cache_test[audio]['peaks_points'][peak_idx][0]
                 is_match  = any(
-                    abs(peak_time - float(a)) <= 1
-                    for a in validation_group[audio]
+                    abs(peak_time - float(app)) <= 1
+                    for app in test_group[audio]
                 )
                 y_true_full.append(int(is_match))
                 idx += 1

@@ -15,7 +15,7 @@ class DecisionTrees:
         - fit(X_train, y_train): trains the model on the provided training data
         - predict_proba(X_test): returns the predicted probabilities for the positive class
         - predict(X_test, PROBABILITY_THRESHOLD=0.5): returns binary predictions based on the specified probability threshold
-        - evaluate(X_test, test_group, cache_test, validation_group): evaluates the model's performance and stores the results in the 'metrics' dictionary
+        - evaluate(X_test, test_group, cache_test): evaluates the model's performance and stores the results in the 'metrics' dictionary
         - summary(): prints a summary of the model's performance metrics
     """
     def __init__(self, model_type: str = 'xgboost', **kwargs):
@@ -43,7 +43,7 @@ class DecisionTrees:
         probs = self.predict_proba(X_test)
         return probs > PROBABILITY_THRESHOLD
     
-    def evaluate(self, X_test: np.ndarray, test_group: dict, cache_test: dict, validation_group: dict):
+    def evaluate(self, X_test: np.ndarray, test_group: dict, cache_test: dict):
         probs = self.predict_proba(X_test)
         detections = self.predict(X_test)
 
@@ -52,14 +52,14 @@ class DecisionTrees:
 
         idx = 0
 
-        for audio in test_group:
+        for audio in cache_test:
             n_peaks = cache_test[audio]['cwt_features'].shape[0]
             for peak_idx in range(n_peaks):
                 peak_time = cache_test[audio]['peaks_points'][peak_idx][0]
 
                 is_match = any(
                     abs(peak_time - float(approx)) <= 1
-                    for approx in validation_group[audio]
+                    for approx in test_group[audio]
                 )
 
                 if detections[idx] and is_match:         # TRUE POSITIVE
@@ -82,7 +82,7 @@ class DecisionTrees:
 
         fp = len(fp_list)
 
-        total_samples = len(validation_group)
+        total_samples = len(test_group)
         total_detections = len(detections)
 
         precision = tp / positive_detections if positive_detections > 0 else 0

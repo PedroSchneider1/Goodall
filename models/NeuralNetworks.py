@@ -166,7 +166,7 @@ class NeuralNetworks:
     def predict(self, X_test: np.ndarray, threshold: float = 0.5) -> np.ndarray:
         return self.predict_proba(X_test) > threshold
 
-    def evaluate(self, X_test: np.ndarray, test_group: dict, cache_test: dict, validation_group: dict, threshold: float = 0.5):
+    def evaluate(self, X_test: np.ndarray, test_group: dict, cache_test: dict, threshold: float = 0.5):
         probs = self.predict_proba(X_test)
         detections = probs > threshold
 
@@ -174,14 +174,14 @@ class NeuralNetworks:
         fp_list = []
         idx = 0
 
-        for audio in test_group:
+        for audio in cache_test:
             n_peaks = cache_test[audio]['cwt_features'].shape[0]
             for peak_idx in range(n_peaks):
                 peak_time = cache_test[audio]['peaks_points'][peak_idx][0]
 
                 is_match = any(
                     abs(peak_time - float(approx)) <= 1
-                    for approx in validation_group[audio]
+                    for approx in test_group[audio]
                 )
 
                 if detections[idx] and is_match:
@@ -201,7 +201,7 @@ class NeuralNetworks:
 
         self.metrics[self.model_type] = {
             "feature_type":        self.feature_type,
-            "total_samples":       len(validation_group),
+            "total_samples":       len(test_group),
             "total_detections":    len(detections),
             "positive_detections": positive_detections,
             "negative_detections": negative_detections,
